@@ -48,20 +48,37 @@ export default async function handler(req, res) {
   const model = process.env.AI_MODEL || 'gemini-3.5-flash-lite'
 
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        max_tokens: 220,
-        messages: [{ role: 'system', content: system }, ...messages],
-      }),
-      signal: AbortSignal.timeout(20000),
+    const requestBody = JSON.stringify({
+      model,
+      temperature: 0.2,
+      max_tokens: 220,
+      messages: [{ role: 'system', content: system }, ...messages],
     })
+    let response
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        response = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${key}`,
+          },
+          body: requestBody,
+          signal: AbortSignal.timeout(20000),
+        })
+      } catch (error) {
+        if (attempt === 1 || error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+          throw error
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        continue
+      }
+
+      if (response.status < 500 || attempt === 1) break
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+
     const data = await response.json()
 
     if (!response.ok) {
