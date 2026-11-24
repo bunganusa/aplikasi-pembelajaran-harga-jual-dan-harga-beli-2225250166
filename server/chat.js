@@ -65,7 +65,7 @@ export default async function handler(req, res) {
             Authorization: `Bearer ${key}`,
           },
           body: requestBody,
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(45000),
         })
       } catch (error) {
         if (attempt === 1 || error?.name === 'TimeoutError' || error?.name === 'AbortError') {
