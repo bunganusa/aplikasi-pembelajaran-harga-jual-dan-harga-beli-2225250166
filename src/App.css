@@ -489,6 +489,37 @@ button { cursor: pointer; }
   margin: 12px 0 20px;
 }
 
+.privacy-note {
+  margin: -8px 0 16px;
+  color: #78678e;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.progress-status {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid #d5c8ec;
+  border-radius: 12px;
+  background: #fff;
+  color: #5f4b83;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.progress-status.success {
+  border-color: #b7dfc0;
+  background: #f0fff4;
+  color: #236b38;
+}
+
+.progress-status.error {
+  border-color: #f0b8b8;
+  background: #fff5f5;
+  color: #a12c43;
+}
+
 .welcome-form { display: grid; gap: 10px; }
 
 .welcome-form label {

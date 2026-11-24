@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { PROBLEMS } from '../shared/problems.js'
 import { STAGES } from '../shared/rmt.js'
+import { isProgressStorageConfigured, saveLearningProgress } from './learningProgress.js'
 
 function App() {
   const [namaSiswa, setNamaSiswa] = useState('')
@@ -31,6 +32,7 @@ function App() {
   const [postAnswers, setPostAnswers] = useState({})
   const [postSubmitted, setPostSubmitted] = useState(false)
   const [postScore, setPostScore] = useState(0)
+  const [progressStatus, setProgressStatus] = useState(null)
 
   // State Simulasi
   const [modalModal, setModalModal] = useState('')
@@ -209,6 +211,23 @@ function App() {
   function bukaHalaman(id) {
     setHalaman(id)
     setModalModal('')
+
+    const activityByPage = { Materi: 'materi', 'Latihan Soal': 'latihan' }
+    if (activityByPage[id]) void catatProgres(activityByPage[id])
+  }
+
+  async function catatProgres(activity, score = null) {
+    setProgressStatus({ type: 'pending', message: 'Menyimpan progres secara anonim...' })
+    try {
+      await saveLearningProgress(activity, score)
+      setProgressStatus({ type: 'success', message: 'Progres berhasil tersimpan secara anonim.' })
+    } catch (error) {
+      console.error('Gagal menyimpan progres belajar:', error)
+      setProgressStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Gagal menyimpan progres ke Supabase.',
+      })
+    }
   }
 
   async function kirimPesanAI(text, hintLevel = aiHintLevel) {
@@ -297,6 +316,11 @@ function App() {
 
           <p className="welcome-description">
             Masukkan nama kamu untuk mulai pretest, belajar materi, hingga posttest!
+          </p>
+          <p className="privacy-note">
+            {isProgressStorageConfigured
+              ? 'Nilai dan progres disimpan dengan kode anonim. Nama dan kelas tidak dikirim.'
+              : 'Penyimpanan online belum dikonfigurasi. Nilai dan progres belum dikirim ke Supabase.'}
           </p>
 
           <form
@@ -413,6 +437,12 @@ function App() {
             ♙ <span>Halo, {namaSiswa}!</span> <b>♥</b>
           </div>
         </header>
+
+        {progressStatus && (
+          <p className={`progress-status ${progressStatus.type}`} role="status">
+            {progressStatus.message}
+          </p>
+        )}
 
         {halaman === 'Asisten AI' && (
           <section className="content-page rmt-page">
@@ -661,6 +691,7 @@ function App() {
                         });
                         setPreScore(skor);
                         setPreSubmitted(true);
+                        void catatProgres('pretest', skor);
                       }}
                     >
                       Selesai & Lanjut ke Materi ✓
@@ -869,6 +900,7 @@ function App() {
                         });
                         setPostScore(skor);
                         setPostSubmitted(true);
+                        void catatProgres('posttest', skor);
                       }}
                     >
                       Kumpulkan Posttest & Lihat Hasil Evaluasi ✓

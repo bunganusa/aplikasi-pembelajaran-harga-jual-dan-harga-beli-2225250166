@@ -37,4 +37,12 @@ Aplikasi web edukasi interaktif yang dirancang khusus untuk membantu siswa memah
 
 Untuk Vercel, atur `AI_API_KEY` pada Environment Variables, lalu deploy ulang. Default `AI_BASE_URL` dan `AI_MODEL` sudah diarahkan ke Gemini 3.5 Flash-Lite; kunci API hanya dibaca di backend.
 
+## Supabase (nilai dan progres anonim)
+
+1. Buat project Supabase, lalu buka **SQL Editor** dan jalankan isi `supabase/schema.sql`.
+2. Salin **Project URL** dan **publishable key** dari halaman API Keys project.
+3. Tambahkan ke `.env` lokal dan Environment Variables Vercel sebagai `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`, lalu jalankan ulang/deploy ulang aplikasi.
+
+Aplikasi hanya mengirim ID acak, tahapan belajar, skor pretest/posttest, dan waktu pencatatan. Nama serta kelas tidak dikirim. Tabel hanya memberi akses insert untuk role anonim; data tidak dapat dibaca melalui browser siswa. Jangan pernah menggunakan `service_role` key di aplikasi frontend. Jika belum dikonfigurasi, aplikasi menampilkan pemberitahuan bahwa progres belum tersimpan online.
+
 Tahapan yang digunakan mengikuti konfigurasi di `shared/rmt.js` dari ZIP. Cocokkan nama dan urutannya dengan ringkasan RMT resmi dari dosen/SPADA bila ada ketentuan khusus.
