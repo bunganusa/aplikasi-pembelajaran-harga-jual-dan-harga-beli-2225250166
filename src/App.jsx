@@ -1,4 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { PROBLEMS } from '../shared/problems.js'
+import { STAGES } from '../shared/rmt.js'
 
 function App() {
   const [namaSiswa, setNamaSiswa] = useState('')
@@ -32,6 +34,23 @@ function App() {
 
   // State Simulasi
   const [modalModal, setModalModal] = useState('')
+
+  // State Asisten AI berbasis RMT
+  const [aiProblemId, setAiProblemId] = useState(PROBLEMS[0].id)
+  const [aiStageId, setAiStageId] = useState(1)
+  const [aiHintLevel, setAiHintLevel] = useState(1)
+  const [aiChats, setAiChats] = useState({})
+  const [aiInput, setAiInput] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const aiEndRef = useRef(null)
+  const aiProblem = PROBLEMS.find((problem) => problem.id === aiProblemId)
+  const aiMessages = aiChats[aiProblemId] || []
+  const aiStage = STAGES.find((stage) => stage.id === aiStageId)
+
+  useEffect(() => {
+    aiEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [aiMessages, aiLoading])
 
   // Data Soal Pretest (5 Soal - Tingkat Standar Menengah Kelas 7)
   const pretestSoal = [
@@ -181,6 +200,7 @@ function App() {
     { id: 'Pretest', icon: '📋' },
     { id: 'Materi', icon: '📖' },
     { id: 'Latihan Soal', icon: '📝' },
+    { id: 'Asisten AI', icon: '🤖' },
     { id: 'Posttest', icon: '📊' },
     { id: 'Simulasi', icon: '🧮' },
     { id: 'Tentang', icon: 'ⓘ' },
@@ -189,6 +209,55 @@ function App() {
   function bukaHalaman(id) {
     setHalaman(id)
     setModalModal('')
+  }
+
+  async function kirimPesanAI(text, hintLevel = aiHintLevel) {
+    const message = text.trim()
+    if (!message || aiLoading) return
+
+    const updatedMessages = [...aiMessages, { role: 'user', content: message }]
+    setAiChats((chats) => ({ ...chats, [aiProblemId]: updatedMessages }))
+    setAiInput('')
+    setAiError('')
+    setAiLoading(true)
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: updatedMessages,
+          problemId: aiProblemId,
+          stageId: aiStageId,
+          hintLevel,
+        }),
+      })
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Asisten AI belum dapat menjawab. Coba lagi sebentar.')
+      }
+      if (typeof data?.reply !== 'string' || !data.reply.trim()) {
+        throw new Error('Asisten AI mengirim jawaban kosong. Coba kirim pesan lagi.')
+      }
+
+      setAiChats((chats) => ({
+        ...chats,
+        [aiProblemId]: [...updatedMessages, { role: 'assistant', content: data.reply }],
+      }))
+    } catch (error) {
+      setAiChats((chats) => ({ ...chats, [aiProblemId]: aiMessages }))
+      setAiInput(message)
+      setAiError(error instanceof Error ? error.message : 'Tidak dapat terhubung ke server AI.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  function mintaPetunjukAI() {
+    const nextHint = Math.min(aiHintLevel + 1, 3)
+    setAiHintLevel(nextHint)
+    kirimPesanAI('Saya masih bingung, tolong beri petunjuk.', nextHint)
   }
 
   const toggleMusic = () => {
@@ -344,6 +413,115 @@ function App() {
             ♙ <span>Halo, {namaSiswa}!</span> <b>♥</b>
           </div>
         </header>
+
+        {halaman === 'Asisten AI' && (
+          <section className="content-page rmt-page">
+            <span className="page-label">🤖 TUTOR BELAJAR • MODEL RMT</span>
+            <h1>Belajar langkah demi langkah</h1>
+            <p className="page-intro">
+              Asisten membimbing cara berpikirmu pada satu tahap RMT, bukan memberikan jawaban akhir.
+              Pilih soal dan tahap, lalu ceritakan pemahamanmu.
+            </p>
+
+            <div className="rmt-problem-picker">
+              <label htmlFor="rmtProblem">Pilih soal</label>
+              <select
+                id="rmtProblem"
+                value={aiProblemId}
+                onChange={(event) => {
+                  setAiProblemId(event.target.value)
+                  setAiStageId(1)
+                  setAiHintLevel(1)
+                  setAiError('')
+                }}
+              >
+                {PROBLEMS.map((problem, index) => (
+                  <option key={problem.id} value={problem.id}>
+                    Soal {index + 1} — {problem.judul}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="rmt-problem-card">
+              <span>{aiProblem.indikator}</span>
+              <h2>{aiProblem.judul}</h2>
+              <p>{aiProblem.teks}</p>
+            </div>
+
+            <h2 className="rmt-section-title">Tahapan RMT</h2>
+            <div className="rmt-stages" aria-label="Pilih tahap RMT">
+              {STAGES.map((stage) => (
+                <button
+                  key={stage.id}
+                  type="button"
+                  className={`rmt-stage ${stage.id === aiStageId ? 'active' : ''} ${stage.id < aiStageId ? 'completed' : ''}`}
+                  aria-pressed={stage.id === aiStageId}
+                  onClick={() => {
+                    setAiStageId(stage.id)
+                    setAiHintLevel(1)
+                  }}
+                >
+                  <span>{stage.id}</span>
+                  {stage.nama}
+                </button>
+              ))}
+            </div>
+            <div className="rmt-stage-goal">
+              <b>Tahap {aiStage.id}: {aiStage.nama}</b>
+              <p>{aiStage.tujuan}</p>
+            </div>
+
+            <div className="rmt-chat" aria-live="polite" aria-label="Percakapan dengan tutor AI">
+              {aiMessages.length === 0 && (
+                <div className="rmt-empty">
+                  <b>Mulai dari tahap ini.</b>
+                  <p>
+                    {aiStage.id === 1
+                      ? 'Ceritakan informasi apa yang diketahui dan apa yang ditanyakan soal.'
+                      : `Ceritakan dulu pemahamanmu pada tahap ${aiStage.nama.toLowerCase()}.`}
+                  </p>
+                </div>
+              )}
+              {aiMessages.map((message, index) => (
+                <div key={`${aiProblemId}-${index}`} className={`rmt-bubble ${message.role}`}>
+                  <span>{message.role === 'assistant' ? 'Tutor RMT' : namaSiswa || 'Kamu'}</span>
+                  <p>{message.content}</p>
+                </div>
+              ))}
+              {aiLoading && <div className="rmt-bubble assistant"><p>Tutor sedang menyiapkan petunjuk…</p></div>}
+              <div ref={aiEndRef} />
+            </div>
+
+            {aiError && <p className="rmt-error" role="alert">{aiError}</p>}
+
+            <form
+              className="rmt-composer"
+              onSubmit={(event) => {
+                event.preventDefault()
+                kirimPesanAI(aiInput)
+              }}
+            >
+              <label className="sr-only" htmlFor="rmtMessage">Tulis jawaban atau pertanyaanmu</label>
+              <input
+                id="rmtMessage"
+                value={aiInput}
+                onChange={(event) => setAiInput(event.target.value)}
+                placeholder="Tulis jawaban atau pertanyaanmu…"
+                disabled={aiLoading}
+              />
+              <button className="primary-button" type="submit" disabled={aiLoading || !aiInput.trim()}>
+                Kirim
+              </button>
+            </form>
+            <button className="rmt-help-button" type="button" onClick={mintaPetunjukAI} disabled={aiLoading}>
+              💡 Saya masih bingung — beri petunjuk (level {aiHintLevel}/3)
+            </button>
+            <p className="rmt-note">
+              Petunjuk meningkat bertahap. Kuota gratis AI dibagi oleh semua pengguna dalam project yang sama.
+            </p>
+          </section>
+        )}
 
         {halaman === 'Beranda' && (
           <>
