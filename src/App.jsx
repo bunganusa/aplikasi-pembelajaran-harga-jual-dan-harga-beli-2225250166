@@ -217,10 +217,10 @@ function App() {
   }
 
   async function catatProgres(activity, score = null) {
-    setProgressStatus({ type: 'pending', message: 'Menyimpan progres secara anonim...' })
+    setProgressStatus({ type: 'pending', message: 'Menyimpan nama dan progres...' })
     try {
-      await saveLearningProgress(activity, score)
-      setProgressStatus({ type: 'success', message: 'Progres berhasil tersimpan secara anonim.' })
+      await saveLearningProgress(namaSiswa, activity, score)
+      setProgressStatus({ type: 'success', message: 'Nama dan progres berhasil tersimpan.' })
     } catch (error) {
       console.error('Gagal menyimpan progres belajar:', error)
       setProgressStatus({
@@ -319,8 +319,8 @@ function App() {
           </p>
           <p className="privacy-note">
             {isProgressStorageConfigured
-              ? 'Nilai dan progres disimpan dengan kode anonim. Nama dan kelas tidak dikirim.'
-              : 'Penyimpanan online belum dikonfigurasi. Nilai dan progres belum dikirim ke Supabase.'}
+              ? 'Nama, nilai, dan progres belajar disimpan di Supabase. Kelas tidak dikirim.'
+              : 'Penyimpanan online belum dikonfigurasi. Nama, nilai, dan progres belum dikirim ke Supabase.'}
           </p>
 
           <form
@@ -341,6 +341,7 @@ function App() {
               id="namaSiswa"
               type="text"
               placeholder="Masukkan nama kamu"
+              maxLength={100}
               value={namaSiswa}
               onChange={(e) => setNamaSiswa(e.target.value)}
               required

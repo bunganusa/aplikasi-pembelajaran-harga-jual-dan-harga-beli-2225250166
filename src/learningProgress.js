@@ -15,9 +15,14 @@ function getParticipantId() {
   return participantId
 }
 
-export async function saveLearningProgress(activity, score = null) {
+export async function saveLearningProgress(studentName, activity, score = null) {
   if (!isProgressStorageConfigured) {
     throw new Error('Supabase belum dikonfigurasi. Progres ini belum tersimpan online.')
+  }
+
+  const normalizedName = studentName.trim()
+  if (!normalizedName || normalizedName.length > 100) {
+    throw new Error('Nama siswa harus diisi dan maksimal 100 karakter.')
   }
 
   let response
@@ -32,6 +37,7 @@ export async function saveLearningProgress(activity, score = null) {
       },
       body: JSON.stringify({
         participant_id: getParticipantId(),
+        student_name: normalizedName,
         activity,
         score,
       }),
